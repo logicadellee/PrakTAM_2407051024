@@ -3,28 +3,29 @@ package com.example.praktam_2407051024
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
+import com.example.prakTAM_2407051024.model.ActivityItem
+import com.example.praktam_2407051024.model.ActivitySource
 import com.example.praktam_2407051024.ui.theme.PrakTAM_2407051024Theme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
+//        enableEdgeToEdge()
         setContent {
             PrakTAM_2407051024Theme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    Greeting(
-                        name = "Adelia Agus Safitri",
-                        npm = "2407051024",
-                        modifier = Modifier.padding(innerPadding)
-                    )
+                Surface(modifier = Modifier.fillMaxSize()) {
+                    ActivityList()
                 }
             }
         }
@@ -32,17 +33,49 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun Greeting(name: String, npm: String, modifier: Modifier = Modifier) {
-    Text(
-        text = "Halo, saya $name dengan NPM $npm siap belajar compose!",
-        modifier = modifier
-    )
+fun ActivityList() {
+    LazyColumn(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        items(ActivitySource.dummyActivity) { activity: ActivityItem ->
+            ActivityCard(activity)
+        }
+    }
+}
+
+@Composable
+fun ActivityCard(activity: ActivityItem) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        elevation = CardDefaults.cardElevation(4.dp)
+    ){
+        Row(
+            modifier = Modifier.padding(16.dp)
+        ){
+            Image(
+                painter = painterResource(id = activity.imageRes),
+                contentDescription = activity.nama,
+                modifier = Modifier.size(80.dp)
+            )
+
+            Spacer(modifier = Modifier.width(12.dp))
+
+            Column {
+                Text(text = "Nama: ${activity.nama}")
+                Text(text = "Deskripsi: ${activity.deskripsi}")
+                Text(text = "Waktu: ${activity.waktu}")
+            }
+        }
+    }
 }
 
 @Preview(showBackground = true)
 @Composable
-fun GreetingPreview() {
+fun PreviewActivity() {
     PrakTAM_2407051024Theme {
-        Greeting("Android", npm= "2407051024")
+        ActivityList()
     }
 }
