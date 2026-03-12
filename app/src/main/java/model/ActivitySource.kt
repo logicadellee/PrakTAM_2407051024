@@ -1,5 +1,5 @@
 package com.example.praktam_2407051024.model
-import com.example.prakTAM_2407051024.model.ActivityItem
+import com.example.praktam_2407051024.model.ActivityItem
 import com.example.praktam_2407051024.R
 
 object ActivitySource {

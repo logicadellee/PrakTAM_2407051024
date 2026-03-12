@@ -1,4 +1,4 @@
-package com.example.prakTAM_2407051024.model
+package com.example.praktam_2407051024.model
 import androidx.annotation.DrawableRes
 
 data class ActivityItem(
