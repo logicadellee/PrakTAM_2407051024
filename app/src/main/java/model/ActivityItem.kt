@@ -6,5 +6,5 @@ data class ActivityItem(
     @SerializedName("nama") val nama: String,
     @SerializedName("deskripsi") val deskripsi: String,
     @SerializedName("waktu") val waktu: String,
-    @SerializedName("image_name") val imageName: String
+    @SerializedName("image_url") val imageUrl: String
 )

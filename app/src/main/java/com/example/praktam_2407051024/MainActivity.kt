@@ -4,7 +4,6 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -53,16 +52,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import coil.compose.AsyncImage
 import com.example.praktam_2407051024.model.ActivityItem
-import com.example.praktam_2407051024.model.ActivitySource
 import com.example.praktam_2407051024.network.RetrofitClient
 import com.example.praktam_2407051024.ui.theme.PrakTAM_2407051024Theme
 import kotlinx.coroutines.delay
@@ -127,12 +126,12 @@ fun ActivityList(
             val result = RetrofitClient.instance.getActivities()
             activities = result
             onActivitiesLoaded(result)
+            isLoading = false
             isError = false
         } catch (e: Exception) {
             e.printStackTrace()
-            isError = true
-        } finally {
             isLoading = false
+            isError = true
         }
     }
 
@@ -143,13 +142,29 @@ fun ActivityList(
         return
     }
 
-    if (isError) {
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text(
-                text = "Gagal memuat data. Periksa koneksi internet.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.error
-            )
+    if (isError || activities.isEmpty()) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(32.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    text = "Gagal Memuat Data",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.Red
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "Pastikan koneksi internet Anda menyala",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Color.Gray,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
         }
         return
     }
@@ -195,10 +210,6 @@ fun ActivityList(
 
 @Composable
 fun ActivityRowItem(activity: ActivityItem, navController: NavHostController) {
-    val context = LocalContext.current
-    val resId = ActivitySource.getResourceId(context, activity.imageName)
-    val imageRes = if (resId != 0) resId else R.drawable.compose
-
     Card(
         modifier = Modifier
             .width(160.dp)
@@ -208,9 +219,11 @@ fun ActivityRowItem(activity: ActivityItem, navController: NavHostController) {
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
         Column {
-            Image(
-                painter = painterResource(id = imageRes),
+            AsyncImage(
+                model = activity.imageUrl,
                 contentDescription = activity.nama,
+                placeholder = painterResource(id = R.drawable.compose),
+                error = painterResource(id = R.drawable.praktikum),
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(100.dp),
@@ -235,10 +248,6 @@ fun ActivityRowItem(activity: ActivityItem, navController: NavHostController) {
 
 @Composable
 fun ActivityItemCard(activity: ActivityItem, navController: NavHostController) {
-    val context = LocalContext.current
-    val resId = ActivitySource.getResourceId(context, activity.imageName)
-    val imageRes = if (resId != 0) resId else R.drawable.compose
-
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
@@ -249,9 +258,11 @@ fun ActivityItemCard(activity: ActivityItem, navController: NavHostController) {
             modifier = Modifier.padding(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Image(
-                painter = painterResource(id = imageRes),
+            AsyncImage(
+                model = activity.imageUrl,
                 contentDescription = activity.nama,
+                placeholder = painterResource(id = R.drawable.compose),
+                error = painterResource(id = R.drawable.praktikum),
                 modifier = Modifier
                     .width(90.dp)
                     .height(90.dp)
@@ -311,10 +322,6 @@ fun ActivityDetailScreen(
     activity: ActivityItem,
     navController: NavHostController
 ) {
-    val context = LocalContext.current
-    val resId = ActivitySource.getResourceId(context, activity.imageName)
-    val imageRes = if (resId != 0) resId else R.drawable.compose
-
     var isFavorite by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
@@ -328,9 +335,11 @@ fun ActivityDetailScreen(
         ) {
             item {
                 Box {
-                    Image(
-                        painter = painterResource(id = imageRes),
+                    AsyncImage(
+                        model = activity.imageUrl,
                         contentDescription = activity.nama,
+                        placeholder = painterResource(id = R.drawable.compose),
+                        error = painterResource(id = R.drawable.praktikum),
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(280.dp),
