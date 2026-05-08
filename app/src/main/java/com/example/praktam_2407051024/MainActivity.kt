@@ -36,12 +36,13 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -52,17 +53,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.navigation.NavController
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.praktam_2407051024.model.ActivityItem
 import com.example.praktam_2407051024.model.ActivitySource
+import com.example.praktam_2407051024.network.RetrofitClient
 import com.example.praktam_2407051024.ui.theme.PrakTAM_2407051024Theme
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -86,18 +87,22 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun AppNavigation(navController: androidx.navigation.NavHostController) {
+fun AppNavigation(navController: NavHostController) {
+    var activities by remember { mutableStateOf<List<ActivityItem>>(emptyList()) }
+
     NavHost(
         navController = navController,
         startDestination = "home"
     ) {
         composable("home") {
-            ActivityList(navController = navController)
+            ActivityList(
+                navController = navController,
+                onActivitiesLoaded = { activities = it }
+            )
         }
-
         composable("detail/{nama}") { backStackEntry ->
             val nama = backStackEntry.arguments?.getString("nama")
-            val activity = ActivitySource.dummyActivity.find { it.nama == nama }
+            val activity = activities.find { it.nama == nama }
             if (activity != null) {
                 ActivityDetailScreen(
                     activity = activity,
@@ -109,7 +114,46 @@ fun AppNavigation(navController: androidx.navigation.NavHostController) {
 }
 
 @Composable
-fun ActivityList(navController: NavHostController) {
+fun ActivityList(
+    navController: NavHostController,
+    onActivitiesLoaded: (List<ActivityItem>) -> Unit = {}
+) {
+    var activities by remember { mutableStateOf<List<ActivityItem>>(emptyList()) }
+    var isLoading by remember { mutableStateOf(true) }
+    var isError by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        try {
+            val result = RetrofitClient.instance.getActivities()
+            activities = result
+            onActivitiesLoaded(result)
+            isError = false
+        } catch (e: Exception) {
+            e.printStackTrace()
+            isError = true
+        } finally {
+            isLoading = false
+        }
+    }
+
+    if (isLoading) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator()
+        }
+        return
+    }
+
+    if (isError) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text(
+                text = "Gagal memuat data. Periksa koneksi internet.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.error
+            )
+        }
+        return
+    }
+
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
@@ -126,14 +170,9 @@ fun ActivityList(navController: NavHostController) {
                 modifier = Modifier.padding(bottom = 16.dp)
             )
 
-            LazyRow(
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                items(ActivitySource.dummyActivity) { activity ->
-                    ActivityRowItem(
-                        activity = activity,
-                        navController = navController
-                    )
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                items(activities) { activity ->
+                    ActivityRowItem(activity = activity, navController = navController)
                 }
             }
 
@@ -148,32 +187,29 @@ fun ActivityList(navController: NavHostController) {
             )
         }
 
-        items(ActivitySource.dummyActivity) { activity ->
-            ActivityItemCard(
-                activity = activity,
-                navController = navController
-            )
+        items(activities) { activity ->
+            ActivityItemCard(activity = activity, navController = navController)
         }
     }
 }
 
 @Composable
 fun ActivityRowItem(activity: ActivityItem, navController: NavHostController) {
+    val context = LocalContext.current
+    val resId = ActivitySource.getResourceId(context, activity.imageName)
+    val imageRes = if (resId != 0) resId else R.drawable.compose
+
     Card(
         modifier = Modifier
             .width(160.dp)
-            .clickable {
-                navController.navigate("detail/${activity.nama}")
-            },
+            .clickable { navController.navigate("detail/${activity.nama}") },
         shape = RoundedCornerShape(12.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        )
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
         Column {
             Image(
-                painter = painterResource(id = activity.imageRes),
+                painter = painterResource(id = imageRes),
                 contentDescription = activity.nama,
                 modifier = Modifier
                     .fillMaxWidth()
@@ -199,21 +235,22 @@ fun ActivityRowItem(activity: ActivityItem, navController: NavHostController) {
 
 @Composable
 fun ActivityItemCard(activity: ActivityItem, navController: NavHostController) {
+    val context = LocalContext.current
+    val resId = ActivitySource.getResourceId(context, activity.imageName)
+    val imageRes = if (resId != 0) resId else R.drawable.compose
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        )
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
         Row(
             modifier = Modifier.padding(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Gambar kecil di kiri
             Image(
-                painter = painterResource(id = activity.imageRes),
+                painter = painterResource(id = imageRes),
                 contentDescription = activity.nama,
                 modifier = Modifier
                     .width(90.dp)
@@ -224,7 +261,6 @@ fun ActivityItemCard(activity: ActivityItem, navController: NavHostController) {
 
             Spacer(modifier = Modifier.width(12.dp))
 
-            // Info di kanan
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = activity.nama,
@@ -248,9 +284,7 @@ fun ActivityItemCard(activity: ActivityItem, navController: NavHostController) {
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Button(
-                    onClick = {
-                        navController.navigate("detail/${activity.nama}")
-                    },
+                    onClick = { navController.navigate("detail/${activity.nama}") },
                     shape = RoundedCornerShape(50),
                     modifier = Modifier
                         .fillMaxWidth()
@@ -277,12 +311,16 @@ fun ActivityDetailScreen(
     activity: ActivityItem,
     navController: NavHostController
 ) {
+    val context = LocalContext.current
+    val resId = ActivitySource.getResourceId(context, activity.imageName)
+    val imageRes = if (resId != 0) resId else R.drawable.compose
+
     var isFavorite by remember { mutableStateOf(false) }
-    var isLoading by remember { mutableStateOf(false)}
+    var isLoading by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
 
-    Box(modifier = Modifier.fillMaxWidth()) {
+    Box(modifier = Modifier.fillMaxSize()) {
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
@@ -291,7 +329,7 @@ fun ActivityDetailScreen(
             item {
                 Box {
                     Image(
-                        painter = painterResource(id = activity.imageRes),
+                        painter = painterResource(id = imageRes),
                         contentDescription = activity.nama,
                         modifier = Modifier
                             .fillMaxWidth()
@@ -300,16 +338,11 @@ fun ActivityDetailScreen(
                     )
 
                     IconButton(
-                        onClick = {
-                            navController.popBackStack()
-                        },
+                        onClick = { navController.popBackStack() },
                         modifier = Modifier
                             .align(Alignment.TopStart)
                             .padding(10.dp)
-                            .background(
-                                Color.Black.copy(alpha = 0.35f),
-                                shape = CircleShape
-                            )
+                            .background(Color.Black.copy(alpha = 0.35f), shape = CircleShape)
                     ) {
                         Icon(
                             imageVector = Icons.Filled.ArrowBack,
@@ -323,16 +356,10 @@ fun ActivityDetailScreen(
                         modifier = Modifier
                             .align(Alignment.TopEnd)
                             .padding(10.dp)
-                            .background(
-                                Color.Black.copy(alpha = 0.35f),
-                                shape = CircleShape
-                            )
+                            .background(Color.Black.copy(alpha = 0.35f), shape = CircleShape)
                     ) {
                         Icon(
-                            imageVector = if (isFavorite)
-                                Icons.Filled.Favorite
-                            else
-                                Icons.Outlined.FavoriteBorder,
+                            imageVector = if (isFavorite) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
                             contentDescription = "Favorite",
                             tint = if (isFavorite) Color.Red else Color.White
                         )
@@ -371,7 +398,6 @@ fun ActivityDetailScreen(
                             coroutineScope.launch {
                                 isLoading = true
                                 delay(2000)
-
                                 snackbarHostState.showSnackbar(
                                     "Aktivitas ${activity.nama} berhasil ditandai selesai!"
                                 )
@@ -410,12 +436,11 @@ fun ActivityDetailScreen(
                             )
                         }
                     }
+
                     Spacer(modifier = Modifier.height(12.dp))
 
                     Button(
-                        onClick = {
-                            navController.popBackStack()
-                        },
+                        onClick = { navController.popBackStack() },
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(50.dp),
@@ -434,18 +459,10 @@ fun ActivityDetailScreen(
                 }
             }
         }
+
         SnackbarHost(
             hostState = snackbarHostState,
             modifier = Modifier.align(Alignment.BottomCenter)
         )
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun PreviewActivity() {
-    PrakTAM_2407051024Theme {
-        val navController = rememberNavController()
-        ActivityList(navController = navController)
     }
 }
